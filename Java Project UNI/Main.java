@@ -2,6 +2,7 @@ import java.io.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+
 // --- ENUMS ---
 enum Category {
     FOOD, NON_FOOD
@@ -107,22 +108,39 @@ class Receipt implements Serializable {
         try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
             writer.println("Касова бележка #" + number);
             writer.println("Касиер: " + cashier);
-            writer.println("Дата: " + dateTime);
+            writer.println("Срок на годност: " + dateTime);
             writer.println("Списък със стоки:");
             for (Map.Entry<Product, Integer> entry : items.entrySet()) {
-                writer.printf("- %s x%d -> %.2f лв\n", entry.getKey().getName(), entry.getValue(), entry.getKey().getDeliveryPrice());
+                double unitPrice = entry.getKey().getDeliveryPrice();
+                writer.printf("- %s x%d -> %.2f лв\n", entry.getKey().getName(), entry.getValue(), unitPrice);
             }
             writer.printf("Общо: %.2f лв\n", total);
         }
 
-        // Сериализация
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("receipt_" + number + ".ser"))) {
             out.writeObject(this);
         }
+
+        System.out.println("Касова бележка записана във файл: " + filename);
     }
 
     public static int getReceiptCount() {
         return receiptCounter;
+    }
+
+    public static Receipt loadFromSerializedFile(String filename) throws IOException, ClassNotFoundException {
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(filename))) {
+            return (Receipt) in.readObject();
+        }
+    }
+
+    public static void printReceiptFromFile(String filename) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        }
     }
 
     public double getTotal() { return total; }
@@ -151,6 +169,10 @@ class Store {
 
     public void addCashier(Cashier cashier) {
         cashiers.add(cashier);
+    }
+
+    public List<Cashier> getCashiers() {
+        return cashiers;
     }
 
     public Receipt sellProducts(Cashier cashier, Map<String, Integer> requestedProducts) throws InsufficientQuantityException, IOException {
@@ -194,6 +216,7 @@ class Store {
         return receipts.size();
     }
 }
+
 // --- MAIN ---
 public class Main {
     public static void main(String[] args) {
@@ -211,9 +234,7 @@ public class Main {
             Map<String, Integer> order = new HashMap<>();
             order.put("P1", 2);
             order.put("P2", 1);
-
-            store.sellProducts(cashier, order); // Use the cashier object already created
-
+            store.sellProducts(cashier, order);
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
@@ -222,5 +243,14 @@ public class Main {
         System.out.println("Разходи: " + store.calculateExpenses());
         System.out.println("Печалба: " + store.calculateProfit());
         System.out.println("Издадени касови бележки: " + store.getReceiptCount());
+
+        // Пример за четене на записана касова бележка
+        try {
+            Receipt.printReceiptFromFile("receipt_1.txt");
+            Receipt loaded = Receipt.loadFromSerializedFile("receipt_1.ser");
+            System.out.println("Успешно заредена касова бележка със сума: " + loaded.getTotal());
+        } catch (Exception ex) {
+            System.err.println("Грешка при зареждане на бележка: " + ex.getMessage());
+        }
     }
 }
