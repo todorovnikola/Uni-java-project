@@ -1,5 +1,4 @@
 # Uni-java-project
-F112923/CITB408 - Store/Магазин
 README - Java Project: Store Management System
 
 Проект по "Програмиране с Java" – CITB408, Пролетен семестър 2024/2025
